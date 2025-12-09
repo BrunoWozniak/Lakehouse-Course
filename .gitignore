@@ -194,8 +194,6 @@ dist/
 
 # Generated files
 *.log
-*.csv
-*.json
 
 # Temp files
 *.tmp
