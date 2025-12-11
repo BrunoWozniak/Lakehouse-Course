@@ -1,206 +1,139 @@
-# 🚀 LAKEHOUSE COURSE - MASTER GUIDE
-**Course Time: 8:30 AM | Current Status: READY**
+# Lakehouse Architecture - Reference Guide
 
----
-
-## ⚡ QUICK START (6:00 AM CHECKLIST)
-
-```bash
-# 1. Start everything
-docker-compose up -d
-
-# 2. Verify services (should all be running)
-docker ps
-
-# 3. Test Dremio queries work
-# Go to http://localhost:9047 (dremio/dremio123)
-# Run the 5 saved queries in tabs
-```
-
----
-
-## 🌐 SERVICE URLS & CREDENTIALS
+## Service URLs & Credentials
 
 | Service | URL | Username | Password |
 |---------|-----|----------|----------|
 | **Dremio** | http://localhost:9047 | dremio | dremio123 |
 | **MinIO** | http://localhost:9001 | minio | minio123 |
-| **Airbyte** | http://localhost:8000 | admin | admin |
 | **Nessie** | http://localhost:19120 | - | - |
 | **Jupyter** | http://localhost:8888 | - | token: lakehouse |
 | **Superset** | http://localhost:8088 | admin | admin |
 
 ---
 
-## ✅ WHAT'S WORKING
+## Quick Start
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Verify services are running
+docker ps
+```
+
+---
+
+## Current Status
+
+### Working Components
 
 1. **MinIO**: Storing data in `lakehouse` bucket
-2. **Airbyte**: One connection configured (`ecoride_customers.csv`)
-3. **Dremio**: 5 working SQL queries via S3 source
-4. **Nessie**: Catalog running (has known bug with Dremio)
-5. **Jupyter**: Ready for Python/Spark demos
-6. **Superset**: UI works (connection issue - use as teaching moment)
+2. **Dremio**: SQL queries via direct S3 source connection
+3. **Nessie**: Catalog running (known compatibility issue with Dremio/MinIO)
+4. **Jupyter**: Ready for Python/Spark exploration
+5. **Superset**: UI accessible with Dremio driver installed
+6. **dbt**: Silver layer transformation for customers model working
+
+### Data Available
+
+Currently only **customers** data is ingested via Airbyte:
+- Location: `minio.lakehouse."bronze.ecoride".customers_ae0f9e2b-1483-4b02-98c1-bb27e5e135b4.data`
+- Records: ~2500 customers
+
+Other data sources (vehicles, sales, product_reviews, chargenet, vehicle_health) are defined in dbt but not yet ingested.
 
 ---
 
-## 📚 HOUR-BY-HOUR COURSE PLAN
+## Known Issues
 
-### Hour 1: Architecture (9:00-10:00)
-- Draw lakehouse architecture on board
-- Explain each component
-- **Key message**: "We'll see real integration challenges"
+### Dremio + Nessie + MinIO Compatibility
 
-### Hour 2: Storage Layer (10:00-11:00)
-- Demo MinIO UI
-- Show bucket structure
-- Upload a file manually
+Dremio cannot resolve `s3a://` paths through Nessie when using MinIO locally.
 
-### Hour 3: Data Ingestion (11:00-12:00)
-- Show Airbyte connection
-- Run a sync live
-- Show data in MinIO
+**Error**: `"http: Name or service not known"`
 
-### LUNCH (12:00-13:00)
+**Workaround**: Connect Dremio directly to MinIO as an S3 source (already configured).
 
-### Hour 4: Data Catalog & The Bug (13:00-14:00)
-- Show Nessie working
-- **Demonstrate the bug**: Dremio can't read through Nessie
-- **Teaching moment**: "This is real data engineering"
-- Show the workaround: Direct S3 connection
-
-### Hour 5: SQL Analytics (14:00-15:00)
-- **Run the 5 Dremio queries**
-- Let students write queries
-- Show virtual datasets
-
-### Hour 6: Transformations (15:00-16:00)
-- Explain dbt concept
-- Show model files
-- Discuss medallion architecture
-
-### Hour 7: Wrap-up (16:00-17:00)
-- Recap architecture
-- Discuss the bug as learning
-- Career advice
+**Note**: This issue does not occur with AWS S3 or Azure in production environments.
 
 ---
 
-## 🔥 THE BUG (Your Teaching Moment)
-
-**What to say:**
-"Last night, I discovered a compatibility issue between Dremio's Nessie connector and MinIO. This is PERFECT for learning:
-- In production, you'd use AWS S3 where this works fine
-- I found a workaround by connecting directly to S3
-- This is exactly what you'll face in real projects"
-
-**The Technical Issue:**
-- Dremio can't resolve `s3a://` paths through Nessie when using MinIO
-- Error: "http: Name or service not known"
-- Workaround: Connect Dremio directly to MinIO as S3 source
-
----
-
-## 💾 DREMIO QUERIES (Already Saved in Tabs)
+## Dremio Queries
 
 ```sql
--- Tab 1: Customer Count
+-- Customer Count
 SELECT COUNT(*) as total_customers
 FROM minio.lakehouse."bronze.ecoride".customers_ae0f9e2b-1483-4b02-98c1-bb27e5e135b4.data
 
--- Tab 2: Sample Data
+-- Sample Data
 SELECT *
 FROM minio.lakehouse."bronze.ecoride".customers_ae0f9e2b-1483-4b02-98c1-bb27e5e135b4.data
 LIMIT 20
 
--- Tab 3: City Analytics
+-- City Analytics
 SELECT city, COUNT(*) as customer_count
 FROM minio.lakehouse."bronze.ecoride".customers_ae0f9e2b-1483-4b02-98c1-bb27e5e135b4.data
 GROUP BY city
 ORDER BY customer_count DESC
-
--- Tab 4 & 5: Additional analytics queries
 ```
 
 ---
 
-## 🆘 EMERGENCY FALLBACKS
+## dbt Transformations
 
-### If Dremio fails:
-```python
-# Use Jupyter instead
-import pandas as pd
-df = pd.read_parquet('s3://lakehouse/bronze.ecoride/customers_*/data/*.parquet')
+### Running dbt
+
+```bash
+cd transformation/silver
+export DREMIO_USER=dremio
+export DREMIO_PASSWORD=dremio123
+
+# Run customers model
+dbt run --select customers
 ```
 
-### If Airbyte fails:
-- Use existing synced data
-- Show manual upload to MinIO
+### Source Configuration
 
-### If everything fails:
-- Focus on architecture
-- Use whiteboard extensively
-- Share troubleshooting story
+The customers source is configured in `transformation/silver/models/sources.yml`:
+- Database: `minio`
+- Schema: `lakehouse."bronze.ecoride"."customers_ae0f9e2b-1483-4b02-98c1-bb27e5e135b4"`
+- Table identifier: `data`
 
----
-
-## 💬 KEY MESSAGES FOR STUDENTS
-
-1. **"This is real data engineering"** - Debugging is 50% of the job
-2. **"Architecture > Tools"** - Tools can be swapped
-3. **"Problem-solving mindset"** - We found a bug and worked around it
-4. **"Production reality"** - In AWS/Azure, these issues are rare
+Other sources are defined as placeholders for future data ingestion.
 
 ---
 
-## 📝 FILES FOR REFERENCE
+## Superset Connection
 
-- `DEMO_SCRIPT.md` - Detailed demo script
-- `AIRBYTE_SETUP.md` - Airbyte configuration details
-- `dremio_queries.sql` - Business queries examples
-- `NAMESPACE_MAPPING.md` - Correct data namespaces
-- `CHANGES_MADE.md` - What we modified overnight
+### Connecting to Dremio
 
----
-
-## ⚙️ TECHNICAL NOTES
-
-### Docker Setup:
-- Custom Superset image with Dremio driver (attempted)
-- All services in docker-compose.yml
-- Volumes persist data between restarts
-
-### Data Flow:
-1. CSV/JSON files → Airbyte
-2. Airbyte → MinIO (Iceberg tables)
-3. MinIO ← Dremio (direct S3 query)
-4. Nessie catalogs metadata (but Dremio can't read it)
+1. Go to **Settings** → **Database Connections**
+2. Click **+ Database** → Choose **Other**
+3. Use connection string:
+   ```
+   dremio://dremio:dremio123@host.docker.internal:31010/DREMIO
+   ```
+4. Display Name: `Dremio Lakehouse`
+5. Under **Advanced** → **SQL Lab**: Enable "Allow DML" and "Expose database in SQL Lab"
+6. Click **TEST CONNECTION** then **CONNECT**
 
 ---
 
-## 🎯 FINAL CHECKLIST
+## Data Flow
 
-Before starting the course:
-- [ ] All Docker containers running
-- [ ] Dremio queries work
-- [ ] MinIO has data
-- [ ] Airbyte shows successful sync
-- [ ] You have coffee ☕
-
----
-
-## 💪 YOU'VE GOT THIS!
-
-**Remember:**
-- You built a working lakehouse
-- You found and documented a real bug
-- You have 5 working queries
-- Students will learn MORE from seeing real troubleshooting
-
-**Your achievement:**
-- 10+ hours of debugging = Real-world experience to share
-- Working workaround = Problem-solving skills demonstrated
-- Complete documentation = Professional preparation
+```
+CSV/JSON files → Airbyte → MinIO (Iceberg) → Dremio (SQL) → Superset (Viz)
+                                    ↓
+                              dbt (Transformations)
+```
 
 ---
 
-**Get some sleep! See you at 8:30 AM for a great course!** 🚀
+## Files Reference
+
+- `docker-compose.yml` - Service orchestration
+- `transformation/silver/` - dbt silver layer models
+- `transformation/gold/` - dbt gold layer models
+- `docker/superset/` - Custom Superset configuration
+- `simple_ingestion/` - Data ingestion service
