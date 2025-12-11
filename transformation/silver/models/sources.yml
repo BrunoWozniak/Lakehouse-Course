@@ -2,23 +2,8 @@ version: 2
 
 sources:
   - name: ecoride_bronze
-    database: catalog
-    schema: bronze.ecoride
+    database: minio
+    schema: lakehouse."bronze.ecoride"
     tables:
       - name: customers
-      - name: sales
-      - name: vehicles
-      - name: product_reviews
-
-  - name: chargenet_bronze
-    database: catalog
-    schema: bronze.chargenet
-    tables:
-      - name: charging_sessions
-      - name: stations
-
-  - name: vehicle_health_bronze
-    database: catalog
-    schema: bronze.vehicle_health
-    tables:
-      - name: logs
+        identifier: customers_ae0f9e2b-1483-4b02-98c1-bb27e5e135b4.data
