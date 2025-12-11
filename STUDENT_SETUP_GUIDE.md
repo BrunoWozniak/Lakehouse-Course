@@ -1,6 +1,6 @@
-# Setup Guide: Lakehouse Project (Part 1 - Ingestion)
+# Setup Guide: Building the Lakehouse Project
 
-Welcome! This guide will walk you through setting up the Lakehouse infrastructure and ingesting our raw data into the "bronze" layer of our data lake.
+Welcome! This guide provides a complete walkthrough for setting up the project infrastructure, ingesting data with Airbyte, and transforming it with dbt.
 
 Please follow these steps carefully.
 
@@ -10,124 +10,220 @@ Before you begin, please ensure you have the following software installed on you
 
 1.  **Docker Desktop:** This is essential for running all the services for our data platform. [Download Docker Desktop](https://www.docker.com/products/docker-desktop/).
 2.  **Git:** The version control system we use to download the project. [Download Git](https://git-scm.com/downloads).
-3.  **A Text Editor:** We recommend [Visual Studio Code](https://code.visualstudio.com/download).
+3.  **Python 3.8+ and pip:** Required for running dbt.
+4.  **A Text Editor:** We recommend [Visual Studio Code](https://code.visualstudio.com/download).
 
-**For Windows Users:** Please ensure you have installed and are using the [Windows Subsystem for Linux 2 (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install) as it is required for Docker Desktop to run Linux containers.
-
-## Step 1: Get the Project Code
-
-First, we need to download the project repository from GitHub.
-
-Open your terminal, navigate to the directory where you want to store the project, and run the following commands:
-
-```bash
-git clone https://github.com/BrunoWozniak/Lakehouse-Course.git
-cd Lakehouse-Course
-```
-
-## Step 2: Configure the Environment
-
-The project uses a `.env` file to manage credentials for our local services. Create a new file named `.env` in the root of the project directory and paste the following content into it.
-
-```env
-# MinIO (S3) Credentials for local setup
-MINIO_ROOT_USER=minio
-MINIO_ROOT_PASSWORD=minioadmin
-```
-
-## Step 3: Start Platform and Ingest Data
-
-The main `docker-compose.yml` file contains all the core services we need, including a custom service that will automatically handle our data ingestion.
-
-In your terminal, from the root of the project directory, run the following command:
-
-```bash
-docker-compose up -d --build
-```
-This command will build the ingestion container, download all service images, start the platform, and run the ingestion script.
-
-## Step 4: Verify Ingestion Success
-
-After a few minutes, the script will finish. You can verify that the data has been successfully ingested by following these steps:
-
-1.  **Open the MinIO UI:**
-    Navigate to [http://localhost:9001](http://localhost:9001) in your web browser.
-
-2.  **Log In:**
-    Log in to the MinIO console using the credentials from your `.env` file:
-    *   Access Key: `minio`
-    *   Secret Key: `minioadmin`
-
-3.  **Check for Data:**
-    *   You should see a bucket named `lakehouse`.
-    *   Inside the `lakehouse` bucket, you will find a `bronze` folder containing all the ingested data, saved in Parquet format.
-
-## Next Steps
-
-Congratulations! You have successfully set up the data platform and ingested the raw data into the bronze layer of the data lake.
-
-The next stages of the project involve connecting our query engine and running data transformations to create the `silver` and `gold` layers. The setup for these tools has proven to be complex, and we will explore robust, alternative solutions for these steps in our next session.
+**For Windows Users:** Please ensure you have installed and are using the [Windows Subsystem for Linux 2 (WSL2)](https://learn.microsoft.com/en-us/windows/wsl/install). **It is strongly recommended that you perform all steps, including cloning the project, from within your WSL2 terminal.**
 
 ---
 
-## Appendix: Alternative Ingestion with Airbyte
+## Part 1: Start the Core Infrastructure
 
-This is an alternative, more advanced method for data ingestion using the Airbyte platform. This setup is more complex and may not work on all systems.
+This step will start all the necessary services for our data lakehouse, including MinIO (our data lake), Dremio (our query engine), and Nessie (our data catalog).
 
-### Step A: Install and Run Airbyte
-
-1.  **Install `abctl`:**
-    Run the following command in your terminal. This downloads and installs the Airbyte command-line tool.
+1.  **Get the Project Code:**
+    Open your terminal, navigate to the directory where you want to store the project, and clone the repository:
     ```bash
-    curl -LsfS https://get.airbyte.com | bash -
+    git clone https://github.com/BrunoWozniak/Lakehouse-Course.git
+    cd Lakehouse-Course
     ```
 
-2.  **Install Airbyte:**
-    Now, use `abctl` to install Airbyte. The `--low-resource-mode` flag is recommended.
-
-    > **IMPORTANT:** This command will take **10-20 minutes** (or more) to complete as it downloads all the necessary Docker images for Airbyte.
-
+2.  **Start the Services:**
+    Run the following command from the root of the project directory. It will download the necessary Docker images and start all services.
     ```bash
+    docker-compose up -d
+    ```
+    You can check that all services are running with `docker ps`. You should see containers for `dremio`, `minio`, `nessie`, `superset`, and `jupyterlab`.
+
+### 3. Configure Dremio to connect to Nessie and MinIO
+
+Once Dremio is up and running (you can access its UI at [http://localhost:9047](http://localhost:9047)), you need to configure a new source to connect to Nessie (our catalog) and MinIO (our data lake storage).
+
+1.  **Log in to Dremio:**
+    *   Navigate to [http://localhost:9047](http://localhost:9047).
+    *   On your first visit, you will be prompted to create a user. We recommend `dremio` for the username and `dremio123` for the password. Log in with these credentials.
+2.  **Add a New Source:**
+    *   In the Dremio UI, click on the **+ Add Source** button (usually at the bottom of the left sidebar).
+    *   Select **Nessie** from the list of data sources.
+3.  **Configure the Nessie Source:**
+    Fill in the following details for the Nessie source configuration:
+
+| Field | Value |
+| :--- | :--- |
+| **Name** | `catalog` |
+| **Nessie Endpoint** | `http://nessie:19120/api/v2` |
+| **Authentication Type** | `No Authentication` |
+| **Storage Provider** | `AWS S3` |
+| **AWS Access Key** | `minio` |
+| **AWS Secret Key** | `minioadmin` |
+| **Connection Properties** | `fs.s3a.endpoint` = `http://minio:9000` |
+| | `fs.s3a.path.style.access` = `true` |
+| | `dremio.s3.compat` = `true` |
+
+    Click **Save**. Dremio will now be connected to Nessie and MinIO, and you should be able to see the `lakehouse` bucket and any Iceberg tables created by Airbyte.
+
+---
+
+## Part 2: Data Ingestion with Airbyte
+
+This new approach is more robust and simpler to configure. We will upload our source data to a "staging" bucket in MinIO and then use Airbyte's S3 source connector to ingest it into our lakehouse.
+
+### Step 2.1: Upload Source Data to MinIO
+
+First, we need to upload our raw data files into a staging area in MinIO.
+
+1.  **Open the MinIO UI:** Navigate to [http://localhost:9001](http://localhost:9001) and log in (`minio`/`minioadmin`).
+2.  **Create a `source` Bucket:** Click the "Create Bucket" button and create a new bucket named `source`.
+3.  **Upload Files:** Go into the `source` bucket and click the **Upload** button. Upload all the individual `JSON` and `CSV` files from the `data/` directory in your project. Do not upload the `documents` folder itself, only the files inside the main `data` directory.
+
+### Step 2.2: Install and Run Airbyte
+
+1.  **Install `abctl` (Airbyte CLI):**
+    If you haven't already, run the `abctl local install` command. The `--volume` flag is no longer needed with this new approach.
+    ```bash
+    # This command can take 10-20 minutes to complete.
     abctl local install --low-resource-mode
     ```
 
-3.  **Get Your Credentials:**
-    Once the installation is complete, get the username and password for the Airbyte web interface:
+2.  **Retrieve Airbyte UI Credentials:**
+    Run the following command to get the username and password for the Airbyte web interface.
     ```bash
     abctl local credentials
     ```
 
-### Step B: Configure the Airbyte Pipeline
+### Step 2.3: Configure Airbyte
 
-1.  **Access the Airbyte UI:**
-    Open your web browser and navigate to [http://localhost:8000](http://localhost:8000). Log in using the credentials from the previous step.
+1.  **First-Time Login:**
+    The Airbyte UI should be available at [http://localhost:8000](http://localhost:8000). Use the credentials from the previous step to log in.
 
-2.  **Copy Data Files for Airbyte:**
-    Airbyte needs access to the data files. Copy them into a special directory that Airbyte can see:
-    ```bash
-    mkdir -p /tmp/airbyte_local/
-    cp -r data/* /tmp/airbyte_local/
-    ```
+2.  **Configure the Iceberg Destination:**
+    This is the same as before. Set up the **S3 Data Lake** destination to write Iceberg tables to the `lakehouse` bucket, cataloged in Nessie.
 
-3.  **Set up the File Source:**
-    *   In Airbyte, go to **Sources** -> **+ New source** and select the **File** source.
-    *   **Source name:** `Local Project Files`
-    *   **URL:** `/tmp/airbyte_local/`
-    *   **Provider:** `Local`
-    *   **File Format:** `csv`
-    *   Click **Set up source**.
-
-4.  **Set up the S3 Destination:**
-    *   Go to **Destinations** -> **+ New destination** and select **S3**.
-    *   **Destination name:** `Local Data Lake`
-    *   **S3 Bucket Name:** `lakehouse`
-    *   **S3 Bucket Path:** `bronze-airbyte` (use a different path to avoid conflicts)
-    *   **S3 Endpoint:** `http://host.docker.internal:9000` (for Airbyte in Docker to talk to MinIO on the host)
+    *   **Destination Type:** S3 Data Lake
+    *   **Destination name:** `Lakehouse`
+    *   **Format:** `Apache Iceberg`
     *   **AWS Access Key ID:** `minio`
     *   **AWS Secret Access Key:** `minioadmin`
-    *   **Format:** `Parquet`
-    *   Click **Set up destination**.
+    *   **S3 Bucket Name:** `lakehouse`
+    *   **S3 Endpoint:** `http://host.docker.internal:9000`
+    *   **Warehouse URI:** `s3://lakehouse/bronze`
+    *   **Catalog Type:** `Nessie`
+    *   **Nessie URI:** `http://host.docker.internal:19120/api/v2`
+    *   **Nessie Namespace:** `main`
 
-5.  **Create and Run the Connection:**
-    *   Go to **Connections** -> **+ New connection**.
-    *   Connect your `Local Project Files` source to your `Local Data Lake` destination and run the synchronization.
+3.  **Configure the S3 Sources (One Per File):**
+    After extensive testing, we've found the most reliable method is to create **one Airbyte source for each data file**. This prevents resource issues and schema conflicts. You will repeat the following process for every CSV and JSON file you uploaded to the `source` bucket.
+
+    **Example for `ecoride_customers.csv`:**
+    1.  Go to **Sources** and click **+ New source**.
+    2.  Select **S3** as the source type.
+    3.  Configure it as follows:
+        *   **Source name:** `S3 - ecoride_customers` (Give each source a unique name!)
+        *   **S3 Bucket Name:** `source`
+        *   **Globs:** `ecoride_customers.csv` (Use the exact filename)
+        *   **Delivery Method:** **`Replicate Records`** (This is critical!)
+        *   **File Format:** `CSV`
+        *   Use the S3 credentials: `minio` / `minioadmin` and endpoint `http://host.docker.internal:9000`.
+    4.  Click **Set up source**.
+
+    **Example for a JSON file (`chargenet_stations.json`):**
+    *   **Source name:** `S3 - chargenet_stations`
+    *   **Globs:** `chargenet_stations.json`
+    *   **Delivery Method:** `Replicate Records`
+    *   **File Format:** `JSON`
+    *   **Reader Options:** `{"multiLine": true}` (This is critical for our JSON files!)
+
+4.  **Create and Configure Connections:**
+    For each source you create, you must then create a connection to the `Lakehouse` destination.
+    
+    **Example for `S3 - ecoride_customers`:**
+    1.  Go to **Connections** and click **+ New connection**.
+    2.  Select `S3 - ecoride_customers` as the source and `Lakehouse` as the destination.
+    3.  On the next screen, you will see a single stream. Configure it:
+        *   **Primary Key:** `id`
+        *   **Namespace:** `bronze.ecoride`
+        *   **Table Name:** `customers`
+    4.  Save the connection and run the first sync.
+
+    **Repeat this entire process (create source, create connection, configure stream) for all your data files.** It's repetitive, but it is the guaranteed path to success.
+
+### Step 2.4: Upload Unstructured Data (PDFs)
+
+This step remains the same. The PDF documents for the RAG application should be uploaded manually to the `lakehouse/bronze/documents/` path in MinIO using the UI.
+
+---
+
+## Part 3: Data Transformation with dbt
+
+With our data in the bronze layer, we'll now use dbt to transform it into `silver` (cleaned) and `gold` (business-ready) layers.
+
+### Step 3.1: Install dbt and Dremio Adapter
+
+In your terminal, run the following pip command to install dbt and the Dremio adapter:
+```bash
+pip install dbt-dremio
+```
+
+### Step 3.2: Configure Dremio Credentials
+
+dbt needs to connect to Dremio. Our dbt profiles are configured to get credentials from environment variables.
+
+1.  **Get Dremio Password:**
+    *   Navigate to the Dremio UI at [http://localhost:9047](http://localhost:9047).
+    *   On your first visit, you will be prompted to create a user. We recommend using `dremio` for the username and `dremio123` for the password.
+2.  **Set Environment Variables:**
+    In your terminal, set the following environment variables.
+
+    **For macOS, Linux, or Windows (WSL2):**
+    ```bash
+    export DREMIO_USER=dremio
+    export DREMIO_PASSWORD=dremio123
+    ```
+    You will need to do this for every new terminal session, or add it to your shell's startup file (e.g., `~/.zshrc`, `~/.bash_profile`).
+
+    **For Windows (PowerShell):**
+    ```powershell
+    $env:DREMIO_USER="dremio"
+    $env:DREMIO_PASSWORD="dremio123"
+    ```
+    **For Windows (Command Prompt):**
+    ```cmd
+    set DREMIO_USER=dremio
+    set DREMIO_PASSWORD=dremio123
+    ```
+
+### Step 3.3: Run the dbt Models
+
+The project contains two separate dbt projects: `silver` and `gold`. You must run them in order from their respective directories.
+
+01.  **Run the Silver Layer:**
+    ```bash
+    cd transformation/silver
+    dbt run
+    cd ../..
+    ```
+
+2.  **Run the Gold Layer:**
+    ```bash
+    cd transformation/gold
+    dbt run
+    cd ../..
+    ```
+
+### Summary of Transformations
+
+*   **Silver Layer (Physical Tables - Parquet):**
+    *   **What it does:** Cleans the raw bronze data.
+    *   **Tasks:** Casts data types (e.g., strings to dates/timestamps), trims whitespace, and selects relevant columns.
+    *   **Outcome:** Creates physically cleaned Iceberg tables (as Parquet files) in the `silver` layer of the data lake, also cataloged in Nessie.
+
+*   **Gold Layer (Logical Views):**
+    *   **What it does:** Applies business logic to create analysis-ready datasets.
+    *   **Tasks:** Joins silver-layer tables to calculate metrics like *Customer Lifetime Value*, *Charging Station Utilization*, and *Vehicle Usage*.
+    *   **Outcome:** Creates logical **views** in Dremio's `gold` space. These views don't store data themselves but provide a clean, aggregated layer for analysis.
+
+## Next Steps
+
+Congratulations! You have successfully ingested and transformed your data. You can now:
+*   **Explore the Data in Dremio:** Log in to the Dremio UI ([http://localhost:9047](http://localhost:9047)) and query the tables and views you created. You should see `bronze` and `silver` tables in the Nessie source, and `gold` views in the `lakehouse` space.
+*   **Build Dashboards in Superset:** Connect Superset ([http://localhost:8088](http://localhost:8088)) to Dremio and start visualizing your gold-layer views.

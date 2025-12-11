@@ -11,7 +11,7 @@ def create_spark_session():
         .config('spark.jars.packages', 'org.apache.iceberg:iceberg-spark-runtime-3.5_2.13:1.5.0,org.projectnessie.nessie-integrations:nessie-spark-extensions-3.5_2.13:0.80.0,software.amazon.awssdk:bundle:2.17.178,software.amazon.awssdk:url-connection-client:2.17.178') \
         .config('spark.sql.extensions', 'org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions,org.projectnessie.spark.extensions.NessieSparkSessionExtensions') \
         .config('spark.sql.catalog.nessie', 'org.apache.iceberg.spark.SparkCatalog') \
-        .config('spark.sql.catalog.nessie.uri', 'http://localhost:19120/api/v1') \
+        .config('spark.sql.catalog.nessie.uri', 'http://localhost:19120/api/v2') \
         .config('spark.sql.catalog.nessie.ref', 'main') \
         .config('spark.sql.catalog.nessie.authentication.type', 'NONE') \
         .config('spark.sql.catalog.nessie.catalog-impl', 'org.apache.iceberg.nessie.NessieCatalog') \
