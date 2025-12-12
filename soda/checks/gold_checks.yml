@@ -1,0 +1,60 @@
+# Soda Data Quality Checks - Gold Layer
+# Run: soda scan -d lakehouse -c soda/configuration.yml soda/checks/gold_checks.yml
+
+# =============================================================================
+# ECORIDE GOLD CHECKS
+# =============================================================================
+
+checks for customer_lifetime_value:
+  - row_count > 0:
+      name: CLV table has data
+  - duplicate_count(customer_id) = 0:
+      name: No duplicate customers in CLV
+  - avg(total_spent) > 0:
+      name: Average spending is positive
+  - max(total_transactions) < 10000:
+      name: Transaction count is reasonable (sanity check)
+
+checks for customer_segmentation:
+  - row_count > 0:
+      name: Segmentation table has data
+  - duplicate_count(customer_id) = 0:
+      name: No duplicate customers
+
+checks for enriched_sales:
+  - row_count > 0:
+      name: Enriched sales has data
+  - duplicate_count(sale_id) = 0:
+      name: No duplicate sales
+
+checks for vehicle_usage:
+  - row_count > 0:
+      name: Vehicle usage has data
+  - duplicate_count(vehicle_id) = 0:
+      name: No duplicate vehicles
+  - min(total_sales) >= 0:
+      name: No negative sales counts
+
+# =============================================================================
+# CHARGENET GOLD CHECKS
+# =============================================================================
+
+checks for charging_station_utilization:
+  - row_count > 0:
+      name: Station utilization has data
+  - duplicate_count(station_id) = 0:
+      name: No duplicate stations
+  - min(total_sessions) >= 0:
+      name: No negative session counts
+  - min(total_energy_consumed) >= 0:
+      name: No negative energy values
+
+# =============================================================================
+# VEHICLE HEALTH GOLD CHECKS
+# =============================================================================
+
+checks for vehicle_health_analysis:
+  - row_count > 0:
+      name: Health analysis has data
+  - values in (health_status) must exist in ('Healthy', 'Needs Attention'):
+      name: Valid health status values

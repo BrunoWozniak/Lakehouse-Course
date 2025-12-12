@@ -1,34 +1,56 @@
+# Silver Layer Sources
+# Points to Bronze Iceberg tables in the Nessie catalog
+#
+# Path structure: catalog.bronze.{domain}_{table}
+# Example: catalog.bronze.ecoride_customers
+#
+# These are proper Iceberg tables with:
+# - Time travel (query historical data)
+# - Schema evolution
+# - ACID transactions
+# - Metadata management
+
 version: 2
 
 sources:
-  # Currently only customers data is available in MinIO (via Airbyte)
-  # Other sources are defined for future use when data is ingested
-
+  # ==========================================================================
+  # ECORIDE SOURCES (Vehicle Sales)
+  # Bronze Iceberg tables created from raw data
+  # ==========================================================================
   - name: ecoride_bronze
-    database: minio
-    schema: lakehouse."bronze.ecoride"."customers_ae0f9e2b-1483-4b02-98c1-bb27e5e135b4"
+    description: "EcoRide Bronze Iceberg tables"
+    database: catalog
+    schema: bronze
     tables:
-      - name: customers
-        identifier: data
-      - name: vehicles
-        description: "Not yet ingested - placeholder for future"
-      - name: sales
-        description: "Not yet ingested - placeholder for future"
-      - name: product_reviews
-        description: "Not yet ingested - placeholder for future"
+      - name: ecoride_customers
+        description: "Customer information"
+      - name: ecoride_sales
+        description: "Vehicle sales transactions"
+      - name: ecoride_vehicles
+        description: "Vehicle catalog"
+      - name: ecoride_product_reviews
+        description: "Customer product reviews"
 
+  # ==========================================================================
+  # CHARGENET SOURCES (Charging Infrastructure)
+  # ==========================================================================
   - name: chargenet_bronze
-    database: minio
-    schema: lakehouse."bronze.chargenet"
+    description: "ChargeNet Bronze Iceberg tables"
+    database: catalog
+    schema: bronze
     tables:
-      - name: stations
-        description: "Not yet ingested - placeholder for future"
-      - name: charging_sessions
-        description: "Not yet ingested - placeholder for future"
+      - name: chargenet_stations
+        description: "Charging station locations"
+      - name: chargenet_charging_sessions
+        description: "Charging session logs"
 
+  # ==========================================================================
+  # VEHICLE HEALTH SOURCES (Fleet Diagnostics)
+  # ==========================================================================
   - name: vehicle_health_bronze
-    database: minio
-    schema: lakehouse."bronze.vehicle_health"
+    description: "Vehicle health Bronze Iceberg tables"
+    database: catalog
+    schema: bronze
     tables:
-      - name: logs
-        description: "Not yet ingested - placeholder for future"
+      - name: vehicle_health_logs
+        description: "Vehicle diagnostics and maintenance history"

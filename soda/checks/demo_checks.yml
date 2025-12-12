@@ -1,0 +1,96 @@
+# Soda Demo Checks - Show What Happens with Bad Data
+# Run: soda scan -d lakehouse -c soda/configuration.yml soda/checks/demo_checks.yml
+#
+# This file demonstrates different Soda check types and failure scenarios.
+
+# =============================================================================
+# DEMO 1: FRESHNESS CHECK
+# Fails if data is older than expected
+# =============================================================================
+checks for catalog.silver.customers:
+  - freshness(created_at) < 1d:
+      name: Customer data is fresh (updated within 24 hours)
+      warn: when > 12h
+      fail: when > 24h
+
+# =============================================================================
+# DEMO 2: ANOMALY DETECTION
+# Fails if row count changes dramatically
+# =============================================================================
+checks for catalog.silver.sales:
+  - anomaly detection for row_count:
+      name: Sales volume is within normal range
+      warn: when > 2 stddev
+      fail: when > 3 stddev
+
+# =============================================================================
+# DEMO 3: REFERENTIAL INTEGRITY
+# Fails if foreign keys don't exist in parent table
+# =============================================================================
+checks for catalog.silver.sales:
+  - reference check:
+      name: All sales reference valid customers
+      target column: customer_id
+      reference column: catalog.silver.customers.id
+      fail: when > 0 missing
+
+# =============================================================================
+# DEMO 4: SCHEMA CHECK
+# Fails if expected columns are missing
+# =============================================================================
+checks for catalog.silver.customers:
+  - schema:
+      name: Customer table has required columns
+      fail:
+        when required column missing:
+          - id
+          - email
+          - first_name
+          - city
+          - state
+          - country
+
+# =============================================================================
+# DEMO 5: DATA DISTRIBUTION
+# Fails if data is too skewed
+# =============================================================================
+checks for catalog.silver.charging_sessions:
+  - avg(energy_consumed_kwh) between 10 and 100:
+      name: Average energy consumption is reasonable
+  - stddev(energy_consumed_kwh) < 50:
+      name: Energy consumption variance is acceptable
+
+# =============================================================================
+# DEMO 6: CUSTOM SQL CHECK
+# Run arbitrary SQL to validate business rules
+# =============================================================================
+checks for catalog.silver.product_reviews:
+  - failed rows:
+      name: No suspiciously short reviews
+      fail query: |
+        SELECT *
+        FROM catalog.silver.product_reviews
+        WHERE LENGTH(review_text) < 10
+        AND rating = 5
+
+# =============================================================================
+# DEMO 7: PERCENTAGE THRESHOLDS
+# =============================================================================
+checks for catalog.silver.stations:
+  - missing_percent(city) < 5%:
+      name: Less than 5% of stations missing city
+      warn: when >= 2%
+      fail: when >= 5%
+
+  - invalid_percent(operational_status) < 1%:
+      name: Operational status is valid
+      valid values: ['Active', 'Inactive', 'Maintenance', 'Planned']
+
+# =============================================================================
+# DEMO 8: CROSS-TABLE CONSISTENCY
+# =============================================================================
+checks for catalog.silver.vehicle_health_logs:
+  - row_count >= 1000:
+      name: Sufficient vehicle health data
+  - duplicate_percent(vehicle_id, model) < 100%:
+      name: Multiple readings per vehicle expected

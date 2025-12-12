@@ -1,0 +1,7 @@
+id,first_name,email,city,state,country
+1,John,john@example.com,Austin,TX,USA
+2,Jane,jane@example.com,Boston,MA,USA
+3,Bob,invalid-email,Chicago,IL,USA
+4,Alice,,Denver,CO,USA
+5,Charlie,charlie@test.com,,CA,USA
+1,John Duplicate,john2@example.com,Austin,TX,USA

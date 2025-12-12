@@ -8,4 +8,4 @@ SELECT
     city,
     "state",
     country
-FROM {{ source("ecoride_bronze", "customers") }}
+FROM {{ source("ecoride_bronze", "ecoride_customers") }}

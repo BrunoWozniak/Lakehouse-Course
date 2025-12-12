@@ -6,4 +6,4 @@ SELECT
     model_type,
     color,
     "year"
-FROM {{ source("ecoride_bronze", "vehicles") }}
+FROM {{ source("ecoride_bronze", "ecoride_vehicles") }}

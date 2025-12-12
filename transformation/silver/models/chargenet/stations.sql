@@ -9,4 +9,4 @@ SELECT
     operational_status,
     state,
     station_type
-FROM {{ source('chargenet_bronze', 'stations') }}
+FROM {{ source('chargenet_bronze', 'chargenet_stations') }}

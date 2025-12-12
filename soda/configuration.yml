@@ -1,0 +1,11 @@
+# Soda Core Configuration for Data Lakehouse
+# Connects to Dremio for data quality checks
+
+data_source lakehouse:
+  type: dremio
+  host: ${DREMIO_HOST:-localhost}
+  port: 31010
+  username: ${DREMIO_USER:-dremio}
+  password: ${DREMIO_PASSWORD:-dremio123}
+  schema: catalog.silver
+  use_encryption: false

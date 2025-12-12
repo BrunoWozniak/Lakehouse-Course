@@ -1,0 +1,155 @@
+version: 2
+
+models:
+  # ==========================================================================
+  # ECORIDE GOLD MODELS
+  # ==========================================================================
+  - name: customers_gold
+    description: "Enriched customer profiles with derived fields"
+    columns:
+      - name: customer_id
+        description: "Unique customer identifier"
+        tests:
+          - not_null
+          - unique
+      - name: first_name
+        description: "Customer first name"
+      - name: email
+        description: "Customer email"
+      - name: city
+        description: "Customer city"
+      - name: state
+        description: "Customer state"
+      - name: country
+        description: "Customer country"
+      - name: country_code
+        description: "Derived 3-letter country code"
+      - name: location
+        description: "Concatenated city, state, country"
+
+  - name: customer_lifetime_value
+    description: "Customer lifetime value calculations"
+    columns:
+      - name: customer_id
+        description: "Unique customer identifier"
+        tests:
+          - not_null
+          - unique
+      - name: first_name
+        description: "Customer first name"
+      - name: email
+        description: "Customer email"
+      - name: total_spent
+        description: "Total amount spent by customer (NULL if no purchases)"
+      - name: total_transactions
+        description: "Number of purchases"
+      - name: average_transaction_value
+        description: "Average purchase amount"
+
+  - name: customer_segmentation
+    description: "Customer behavior-based segmentation"
+    columns:
+      - name: customer_id
+        description: "Unique customer identifier"
+        tests:
+          - not_null
+          - unique
+      - name: first_name
+        description: "Customer first name"
+      - name: email
+        description: "Customer email"
+      - name: city
+        description: "Customer city"
+      - name: state
+        description: "Customer state"
+      - name: country
+        description: "Customer country"
+      - name: total_purchases
+        description: "Total number of purchases"
+      - name: average_purchase_value
+        description: "Average transaction amount"
+      - name: preferred_models
+        description: "List of frequently purchased vehicle models"
+
+  - name: enriched_sales
+    description: "Sales transactions enriched with customer and vehicle details"
+    columns:
+      - name: sale_id
+        description: "Unique sale identifier"
+        tests:
+          - not_null
+          - unique
+      - name: sale_date
+        description: "Date of sale"
+      - name: sale_price
+        description: "Transaction amount"
+      - name: payment_method
+        description: "Payment method used"
+      - name: customer_name
+        description: "Customer full name"
+      - name: vehicle_model
+        description: "Vehicle model purchased"
+
+  - name: vehicle_usage
+    description: "Vehicle sales and review analytics"
+    columns:
+      - name: vehicle_id
+        description: "Unique vehicle identifier"
+        tests:
+          - not_null
+          - unique
+      - name: model_name
+        description: "Vehicle model name"
+      - name: model_type
+        description: "Vehicle type"
+      - name: year
+        description: "Manufacturing year"
+      - name: total_sales
+        description: "Total units sold"
+      - name: average_rating
+        description: "Average customer review rating"
+
+  # ==========================================================================
+  # CHARGENET GOLD MODELS
+  # ==========================================================================
+  - name: charging_station_utilization
+    description: "Charging station performance metrics"
+    columns:
+      - name: station_id
+        description: "Unique station identifier"
+        tests:
+          - not_null
+          - unique
+      - name: city
+        description: "Station city"
+      - name: country
+        description: "Station country"
+      - name: station_type
+        description: "Type of charging station"
+      - name: total_sessions
+        description: "Total charging sessions"
+      - name: average_duration
+        description: "Average session duration in minutes"
+      - name: total_energy_consumed
+        description: "Total energy delivered in kWh"
+
+  # ==========================================================================
+  # VEHICLE HEALTH GOLD MODELS
+  # ==========================================================================
+  - name: vehicle_health_analysis
+    description: "Fleet health status and analysis"
+    columns:
+      - name: vehicle_id
+        description: "Vehicle identifier"
+        tests:
+          - not_null
+      - name: model
+        description: "Vehicle model"
+      - name: manufacturing_year
+        description: "Year of manufacture"
+      - name: alerts
+        description: "Current alerts"
+      - name: maintenance_history
+        description: "Maintenance record"
+      - name: health_status
+        description: "Derived health status (Healthy/Needs Attention)"

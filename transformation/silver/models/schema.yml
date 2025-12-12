@@ -1,138 +1,162 @@
 version: 2
 
 models:
+  # ==========================================================================
+  # ECORIDE MODELS
+  # ==========================================================================
   - name: customers
-    description: "Transformed data for ecoride customers"
+    description: "Cleaned customer data from EcoRide"
     columns:
       - name: id
-        description: "Unique identifier for the customer"
+        description: "Unique customer identifier"
         tests:
           - not_null
           - unique
       - name: first_name
-        description: "First name of the customer"
+        description: "Customer's first name"
       - name: email
-        description: "Email address of the customer"
+        description: "Customer's email address"
+        tests:
+          - not_null
+      - name: city
+        description: "Customer's city"
+      - name: state
+        description: "Customer's state/province"
+      - name: country
+        description: "Customer's country"
 
   - name: sales
-    description: "Sales data for ecoride vehicles"
+    description: "Vehicle sales transactions"
     columns:
       - name: id
-        description: "Unique identifier for the sale transaction"
+        description: "Unique sale transaction identifier"
         tests:
           - not_null
           - unique
       - name: customer_id
-        description: "Identifier for the customer"
+        description: "Reference to customer"
         tests:
           - not_null
           - relationships:
               to: ref('customers')
               field: id
+      - name: vehicle_id
+        description: "Reference to vehicle"
+      - name: sale_date
+        description: "Date of the sale"
+      - name: sale_price
+        description: "Transaction amount"
+      - name: payment_method
+        description: "Payment method used"
 
   - name: vehicles
-    description: "Details of ecoride vehicles"
+    description: "Vehicle catalog"
     columns:
       - name: id
-        description: "Unique identifier for the vehicle"
+        description: "Unique vehicle identifier"
         tests:
           - not_null
           - unique
       - name: model_name
-        description: "Name of the vehicle model"
+        description: "Vehicle model name"
         tests:
           - accepted_values:
               values: ['EcoSprint', 'PowerRide', 'UrbanGlide', 'TerraCross', 'AeroFlow']
       - name: model_type
-        description: "Type of the vehicle model, e.g., Sedan, SUV"
+        description: "Vehicle type (Sedan, SUV, etc.)"
         tests:
           - accepted_values:
               values: ['Sedan', 'SUV', 'Hatchback', 'Coupe', 'Crossover']
       - name: color
-        description: "Color of the vehicle"
+        description: "Vehicle color"
       - name: year
-        description: "Manufacturing year of the vehicle"
+        description: "Manufacturing year"
 
   - name: product_reviews
-    description: "Customer reviews for ecoride products"
+    description: "Customer product reviews"
     columns:
-      - name: CustomerID
-        description: "Identifier for the customer who wrote the review"
+      - name: customer_id
+        description: "Reference to customer who wrote the review"
         tests:
           - not_null
-          - relationships:
-              to: ref('customers')
-              field: id
-      - name: ReviewID
-        description: "Unique identifier for the product review"
+      - name: review_id
+        description: "Unique review identifier"
         tests:
           - not_null
           - unique
-      - name: VehicleModel
-        description: "Model of the vehicle being reviewed"
-      - name: Rating
-        description: "Rating given by the customer"
-      - name: Date
-        description: "Date of the review"
+      - name: review_date
+        description: "Date the review was submitted"
+      - name: rating
+        description: "Rating (1-5 stars)"
+      - name: review_text
+        description: "Review content"
+      - name: vehicle_model
+        description: "Vehicle model being reviewed"
 
+  # ==========================================================================
+  # CHARGENET MODELS
+  # ==========================================================================
   - name: charging_sessions
-    description: "Details of electric vehicle charging sessions"
+    description: "EV charging session logs"
     columns:
-      - name: charging_rate
-        description: "Rate of charging in kW"
-      - name: cost
-        description: "Cost of the charging session"
-      - name: end_time
-        description: "End time of the charging session"
-      - name: energy_consumed_kWh
-        description: "Total energy consumed in kWh"
       - name: id
-        description: "Unique identifier for the charging session"
+        description: "Unique session identifier"
         tests:
           - not_null
           - unique
-      - name: session_duration
-        description: "Duration of the charging session in minutes"
-      - name: start_time
-        description: "Start time of the charging session"
       - name: station_id
-        description: "Identifier of the charging station"
+        description: "Reference to charging station"
+      - name: session_duration
+        description: "Duration in minutes"
+      - name: energy_consumed_kwh
+        description: "Energy consumed in kWh"
+      - name: charging_rate
+        description: "Charging rate in kW"
+      - name: cost
+        description: "Session cost"
+      - name: start_time
+        description: "Session start timestamp"
+      - name: end_time
+        description: "Session end timestamp"
 
   - name: stations
-    description: "Details of electric vehicle charging stations"
+    description: "Charging station locations"
     columns:
-      - name: address
-        description: "Address of the charging station"
-      - name: city
-        description: "City where the charging station is located"
-      - name: country
-        description: "Country where the charging station is located"
       - name: id
-        description: "Unique identifier for the charging station"
+        description: "Unique station identifier"
         tests:
           - not_null
           - unique
-      - name: number_of_chargers
-        description: "Number of chargers available at the station"
-      - name: operational_status
-        description: "Current operational status of the station"
+      - name: address
+        description: "Street address"
+      - name: city
+        description: "City"
       - name: state
-        description: "State where the charging station is located"
+        description: "State/province"
+      - name: country
+        description: "Country"
+      - name: number_of_chargers
+        description: "Number of charging ports"
+      - name: operational_status
+        description: "Current status (Active, Maintenance, etc.)"
       - name: station_type
-        description: "Type of the charging station"
+        description: "Station type (Level 2, DC Fast, etc.)"
 
+  # ==========================================================================
+  # VEHICLE HEALTH MODELS
+  # ==========================================================================
   - name: vehicle_health_logs
-    description: "Log data for vehicle health and maintenance history"
+    description: "Vehicle diagnostics and maintenance history"
     columns:
-      - name: Alerts
-        description: "Alerts issued for the vehicle"
-      - name: MaintenanceHistory
-        description: "History of maintenance activities"
-      - name: ManufacturingYear
-        description: "Year the vehicle was manufactured"
-      - name: Model
-        description: "Model of the vehicle"
-      - name: vehicleID
-        description: "Identifier for the vehicle"
+      - name: vehicle_id
+        description: "Vehicle identifier"
         tests:
           - not_null
+      - name: model
+        description: "Vehicle model"
+      - name: manufacturing_year
+        description: "Year of manufacture"
+      - name: alerts
+        description: "Active alerts/warnings"
+      - name: maintenance_history
+        description: "Maintenance record history"

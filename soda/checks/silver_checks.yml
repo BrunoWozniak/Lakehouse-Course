@@ -1,0 +1,75 @@
+# Soda Data Quality Checks - Silver Layer
+# Run: soda scan -d lakehouse -c soda/configuration.yml soda/checks/silver_checks.yml
+
+# =============================================================================
+# ECORIDE SILVER CHECKS
+# =============================================================================
+
+checks for customers:
+  - row_count > 0:
+      name: Customers table has data
+  - duplicate_count(id) = 0:
+      name: No duplicate customer IDs
+  - missing_count(email) = 0:
+      name: All customers have email
+  - invalid_count(email) = 0:
+      name: All emails are valid format
+      valid format: email
+
+checks for sales:
+  - row_count > 0:
+      name: Sales table has data
+  - missing_count(customer_id) = 0:
+      name: All sales have customer reference
+  - missing_count(sale_price) = 0:
+      name: All sales have price
+  - min(sale_price) >= 0:
+      name: No negative sale prices
+
+checks for vehicles:
+  - row_count > 0:
+      name: Vehicles table has data
+  - duplicate_count(id) = 0:
+      name: No duplicate vehicle IDs
+
+checks for product_reviews:
+  - row_count > 0:
+      name: Reviews table has data
+  - duplicate_count(review_id) = 0:
+      name: No duplicate review IDs
+  - min(rating) >= 1:
+      name: Rating minimum is 1
+  - max(rating) <= 5:
+      name: Rating maximum is 5
+
+# =============================================================================
+# CHARGENET SILVER CHECKS
+# =============================================================================
+
+checks for charging_sessions:
+  - row_count > 0:
+      name: Charging sessions has data
+  - duplicate_count(id) = 0:
+      name: No duplicate session IDs
+  - min(energy_consumed_kwh) >= 0:
+      name: No negative energy values
+  - min(cost) >= 0:
+      name: No negative costs
+
+checks for stations:
+  - row_count > 0:
+      name: Stations table has data
+  - duplicate_count(id) = 0:
+      name: No duplicate station IDs
+  - missing_count(city) = 0:
+      name: All stations have city
+
+# =============================================================================
+# VEHICLE HEALTH SILVER CHECKS
+# =============================================================================
+
+checks for vehicle_health_logs:
+  - row_count > 0:
+      name: Vehicle health logs has data
+  - missing_count(vehicle_id) = 0:
+      name: All logs have vehicle ID
