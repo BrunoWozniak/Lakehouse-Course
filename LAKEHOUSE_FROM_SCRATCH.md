@@ -537,13 +537,28 @@ GROUP BY c.customer_id, c.first_name, c.last_name, c.email
 
 ## 10. Soda Data Quality
 
+### What is Soda?
+
+Soda is a **data quality** tool that validates your data against defined rules (checks).
+
+| Product | UI | Cost | Description |
+|---------|-----|------|-------------|
+| **Soda Core** | No (CLI only) | Free/OSS | What we use |
+| **Soda Cloud** | Yes (web dashboard) | Paid SaaS | Optional add-on |
+
+### Why Soda isn't in docker-compose
+
+**Soda is a Python package, not a running service.** Unlike Dremio, MinIO, or Superset (which run continuously), Soda is a CLI tool that executes on-demand.
+
+It's installed inside the Dagster container via the orchestration package:
+
 ### Installation
 
 Add to `orchestration/setup.py`:
 ```python
 install_requires=[
     ...
-    "soda-core-dremio",
+    "soda-core-dremio",  # Soda with Dremio connector
 ]
 ```
 
@@ -613,21 +628,55 @@ soda scan -d lakehouse -c soda/configuration.yml soda/checks/silver_checks.yml
 
 ### Integrating with Dagster
 
+Soda can be integrated into Dagster pipelines in two ways:
+
+#### Option A: Asset Check (validates after asset runs)
+
 ```python
-from dagster import asset, AssetCheckResult
+from dagster import asset_check, AssetCheckResult
+import subprocess
 
 @asset_check(asset=silver_dbt_assets)
 def silver_data_quality(context):
     """Run Soda checks after Silver transformation."""
     result = subprocess.run(
         ["soda", "scan", "-d", "lakehouse",
-         "-c", "soda/configuration.yml",
-         "soda/checks/silver_checks.yml"],
-        capture_output=True
+         "-c", "/app/soda/configuration.yml",
+         "/app/soda/checks/silver_checks.yml"],
+        capture_output=True, text=True
     )
-
     passed = result.returncode == 0
     return AssetCheckResult(passed=passed, metadata={"output": result.stdout})
+```
+
+#### Option B: Soda as a Downstream Asset (visible in lineage graph)
+
+```python
+from dagster import asset
+
+@asset(deps=[silver_dbt_assets], group_name="quality")
+def soda_silver_validation(context):
+    """Run Soda data quality checks on Silver layer."""
+    from soda.scan import Scan
+
+    scan = Scan()
+    scan.set_data_source_name("lakehouse")
+    scan.add_configuration_yaml_file("/app/soda/configuration.yml")
+    scan.add_sodacl_yaml_file("/app/soda/checks/silver_checks.yml")
+    scan.execute()
+
+    results = scan.get_scan_results()
+    context.log.info(f"Soda scan completed: {results}")
+
+    if scan.has_check_fails():
+        raise Exception(f"Data quality checks failed! {results}")
+
+    return {"checks_passed": scan.get_checks_pass_count()}
+```
+
+Option B makes Soda visible in Dagster's asset lineage:
+```
+bronze_staging → bronze_iceberg_tables → silver_dbt_assets → soda_silver_validation
 ```
 
 ---

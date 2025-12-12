@@ -533,6 +533,26 @@ Soda is a **data quality** tool that validates your data against rules:
 - Verify referential integrity
 - Detect anomalies
 
+### Important: Soda Architecture
+
+| Product | UI | Cost | This Repo |
+|---------|-----|------|-----------|
+| **Soda Core** | No (CLI only) | Free/OSS | **Installed** |
+| **Soda Cloud** | Yes (web dashboard) | Paid SaaS | Not configured |
+
+**Why isn't Soda in docker-compose?**
+
+Soda is a **Python package**, not a running service. It's installed inside the Dagster container:
+
+```python
+# orchestration/setup.py
+install_requires=[
+    "soda-core-dremio",  # <-- Installed here
+]
+```
+
+Unlike Dremio/MinIO/Superset (which are always-running services), Soda is a CLI tool that runs on-demand.
+
 ### 7.1 Understanding Soda Checks
 
 Check files are in `soda/checks/`. Example from `soda/checks/demo_checks.yml`:
@@ -611,6 +631,95 @@ docker exec dagster soda scan -d lakehouse -c /app/soda/configuration.yml /app/s
 ```
 
 This ensures data quality is checked **before** it reaches dashboards!
+
+### 7.5 Available Check Types (Demo)
+
+The `demo_checks.yml` file showcases 8 different Soda check types:
+
+| Demo | Check Type | What It Validates |
+|------|------------|-------------------|
+| 1 | Freshness | Data updated within 24h |
+| 2 | Anomaly Detection | Row count within normal range |
+| 3 | Referential Integrity | Foreign keys exist in parent table |
+| 4 | Schema Check | Required columns are present |
+| 5 | Data Distribution | Avg/stddev within expected range |
+| 6 | Custom SQL | Business rules via SQL queries |
+| 7 | Percentage Thresholds | Missing/invalid data < X% |
+| 8 | Cross-table Consistency | Duplicate percentages |
+
+### 7.6 Running Different Check Files
+
+```bash
+# Silver layer checks (basic data quality)
+docker exec dagster soda scan -d lakehouse -c /app/soda/configuration.yml /app/soda/checks/silver_checks.yml
+
+# Gold layer checks (business aggregation validation)
+docker exec dagster soda scan -d lakehouse -c /app/soda/configuration.yml /app/soda/checks/gold_checks.yml
+
+# Demo checks (showcases all 8 check types)
+docker exec dagster soda scan -d lakehouse -c /app/soda/configuration.yml /app/soda/checks/demo_checks.yml
+
+# ALL checks at once
+docker exec dagster soda scan -d lakehouse -c /app/soda/configuration.yml /app/soda/checks/
+```
+
+### 7.7 Integrating Soda with Dagster (Advanced)
+
+Soda can be integrated directly into Dagster pipelines! Here are two approaches:
+
+#### Option A: Asset Check (validates after asset runs)
+
+```python
+from dagster import asset_check, AssetCheckResult
+import subprocess
+
+@asset_check(asset=silver_dbt_assets)
+def soda_silver_quality_check(context):
+    """Run Soda checks after Silver transformation."""
+    result = subprocess.run(
+        ["soda", "scan", "-d", "lakehouse",
+         "-c", "/app/soda/configuration.yml",
+         "/app/soda/checks/silver_checks.yml"],
+        capture_output=True, text=True
+    )
+    passed = result.returncode == 0
+    return AssetCheckResult(
+        passed=passed,
+        metadata={"output": result.stdout}
+    )
+```
+
+#### Option B: Soda as a Downstream Asset (visible in lineage)
+
+```python
+from dagster import asset
+
+@asset(deps=[silver_dbt_assets], group_name="quality")
+def soda_silver_validation(context):
+    """Run Soda data quality checks on Silver layer."""
+    from soda.scan import Scan
+
+    scan = Scan()
+    scan.set_data_source_name("lakehouse")
+    scan.add_configuration_yaml_file("/app/soda/configuration.yml")
+    scan.add_sodacl_yaml_file("/app/soda/checks/silver_checks.yml")
+    scan.execute()
+
+    results = scan.get_scan_results()
+    context.log.info(f"Soda scan completed: {results}")
+
+    if scan.has_check_fails():
+        raise Exception(f"Data quality checks failed! {results}")
+
+    return {"checks_passed": scan.get_checks_pass_count()}
+```
+
+With Option B, Soda appears as a visible step in Dagster's asset lineage graph:
+
+```
+bronze_staging → bronze_iceberg_tables → silver_dbt_assets → soda_silver_validation
+                                                          ↘ gold_dbt_assets
+```
 
 ---
 
