@@ -276,7 +276,10 @@ def bronze_iceberg_tables(context: AssetExecutionContext) -> MaterializeResult:
             def format_value(val, dtype):
                 """Format a value for SQL INSERT."""
                 import json
-                if pd.isna(val):
+                is_na = pd.isna(val)
+                if isinstance(is_na, bool) and is_na:
+                    return 'NULL'
+                if (not isinstance(is_na, bool)) and is_na.all():
                     return 'NULL'
                 elif 'datetime' in str(dtype):
                     # Format timestamp
@@ -302,7 +305,7 @@ def bronze_iceberg_tables(context: AssetExecutionContext) -> MaterializeResult:
                 elif isinstance(val, bool):
                     return 'TRUE' if val else 'FALSE'
                 else:
-                    return str(val)
+                    return format_value(str(val), dtype)
 
             for i in range(0, len(df), batch_size):
                 batch = df.iloc[i:i+batch_size]
