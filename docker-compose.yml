@@ -65,6 +65,11 @@ services:
     container_name: nessie
     ports:
       - "19120:19120"
+    environment:
+      # Quarkus-style config for persistent storage
+      QUARKUS_PROFILE: prod
+      NESSIE_VERSION_STORE_TYPE: ROCKSDB
+      NESSIE_VERSION_STORE_PERSIST_DATABASE_PATH: /nessie/data
     volumes:
       - nessie_data:/nessie/data
 
@@ -84,7 +89,9 @@ services:
     user: root
 
   jupyterlab:
-    image: jupyter/datascience-notebook:latest
+    build:
+      context: .
+      dockerfile: docker/jupyterlab/Dockerfile
     container_name: jupyterlab
     ports:
       - "8888:8888"
@@ -93,7 +100,28 @@ services:
     environment:
       JUPYTER_ENABLE_LAB: "yes"
       GRANT_SUDO: "yes"
+      GRPC_DNS_RESOLVER: "native"
     command: start-notebook.sh --NotebookApp.token=''
+    depends_on:
+      - dremio
+    networks:
+      - default
+
+  # ==========================================================================
+  # AI AGENT - LangChain SQL Agent with Chainlit UI
+  # ==========================================================================
+  lakehouse-agent:
+    build:
+      context: .
+      dockerfile: docker/agent/Dockerfile
+    container_name: lakehouse-agent
+    ports:
+      - "8501:8501"
+    env_file:
+      - ./agent/.env
+    depends_on:
+      - dremio
+    restart: unless-stopped
 
 networks:
   default:

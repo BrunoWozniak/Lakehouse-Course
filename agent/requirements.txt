@@ -1,0 +1,16 @@
+# Core dependencies
+chainlit>=1.0.0
+langchain==0.3.10
+langchain-community==0.3.10
+langchain-mistralai==0.2.2
+pydantic>=2.0,<2.10  # Pin to avoid Chainlit bug with Pydantic 2.10.x
+
+# Database connectivity (PyArrow Flight for Dremio)
+pyarrow==18.1.0
+
+# Utilities
+python-dotenv==1.0.1
+
+# Optional: for better formatting
+tabulate==0.9.0
+pandas==2.2.3

@@ -101,9 +101,5 @@ metastore_db/
 .dremio/
 *.env.local
 
-# Development/Personal files (not for students)
-PROGRESS.md
-GEMINI.md
-
 # Claude Code
 .claude/

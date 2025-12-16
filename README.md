@@ -56,6 +56,7 @@ Your mission: Build a unified analytics platform using the **Medallion Architect
 | Data Quality | Soda | - | Data validation and quality checks |
 | Visualization | Superset | 8088 | BI dashboards and charts |
 | Notebooks | JupyterLab | 8888 | Interactive data exploration |
+| **AI Agent** | **LangChain + Mistral** | **8501** | **Natural language SQL queries (NEW!)** |
 
 ## Quick Start
 
@@ -146,6 +147,45 @@ To connect Superset to Dremio:
 dremio+flight://dremio:dremio123@dremio:32010/dremio?UseEncryption=false
 ```
 
+## AI Agent - Natural Language SQL Queries (NEW!)
+
+Ask questions in plain English and get SQL-powered answers from your Data Lakehouse!
+
+### Features
+- Natural language to SQL conversion
+- Powered by Mistral AI (100% FREE tier)
+- Interactive chat interface with Chainlit
+- Query all Gold layer tables
+- See the generated SQL queries
+- Perfect for learning LangChain and AI agents
+
+### Quick Setup (5 minutes)
+
+1. Get a free Mistral API key at https://console.mistral.ai/
+2. Configure the agent:
+   ```bash
+   cd agent
+   cp .env.example .env
+   # Edit .env and add your Mistral API key
+   ```
+3. Start the agent:
+   ```bash
+   docker-compose up -d lakehouse-agent
+   ```
+4. Open http://localhost:8501
+
+### Example Questions
+- "What is the total customer lifetime value?"
+- "Which charging stations have the highest utilization?"
+- "Show me the top 5 customers by revenue"
+- "What are the most common vehicle health issues?"
+
+### Documentation
+- Quick Start: `agent/QUICKSTART.md`
+- Getting Started: `agent/GETTING_STARTED.md`
+- Full Documentation: `agent/README.md`
+- Architecture Details: `agent/ARCHITECTURE.md`
+
 ## Troubleshooting
 
 | Issue | Solution |
@@ -154,6 +194,8 @@ dremio+flight://dremio:dremio123@dremio:32010/dremio?UseEncryption=false
 | Superset connection fails | Use port 32010 (Flight), include `?UseEncryption=false` |
 | Dagster dbt errors | Check Dremio is running, verify credentials in profiles.yml |
 | Soda "Can't open lib" | Rebuild Dagster container to install ODBC driver |
+| Agent API key error | Create `.env` file in `agent/` with your Mistral API key |
+| Agent can't connect to Dremio | Ensure Dremio is running, check `docker ps` |
 
 ## License
 

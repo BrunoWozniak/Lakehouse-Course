@@ -21,8 +21,10 @@ This guide takes you from zero to a fully operational Data Lakehouse with proper
 11. [Soda Data Quality](#11-soda-data-quality)
 12. [Dagster Orchestration](#12-dagster-orchestration)
 13. [Superset Visualization](#13-superset-visualization)
-14. [Naming Conventions](#14-naming-conventions)
-15. [Troubleshooting](#15-troubleshooting)
+14. [Jupyter Notebooks & ML](#14-jupyter-notebooks--ml)
+15. [AI Agent with Chainlit](#15-ai-agent-with-chainlit)
+16. [Naming Conventions](#16-naming-conventions)
+17. [Troubleshooting](#17-troubleshooting)
 
 ---
 
@@ -2255,7 +2257,308 @@ Dashboard filters work when columns have **matching names** across datasets.
 
 ---
 
-## 14. Naming Conventions
+## 14. Jupyter Notebooks & ML
+
+The JupyterLab service provides an interactive environment for data exploration, machine learning, and advanced analytics.
+
+### 14.1 Accessing JupyterLab
+
+Open http://localhost:8888 (no token required).
+
+### 14.2 Connecting to Dremio
+
+Connect to Dremio via Arrow Flight for high-performance queries:
+
+```python
+from pyarrow import flight
+import base64
+import pandas as pd
+
+# Connect to Dremio
+client = flight.connect("grpc://dremio:32010")
+auth = base64.b64encode(b"dremio:dremio123").decode()
+options = flight.FlightCallOptions(headers=[(b"authorization", f"Basic {auth}".encode())])
+
+# Helper function to query Dremio
+def query_dremio(sql: str) -> pd.DataFrame:
+    """Execute SQL query and return pandas DataFrame."""
+    info = client.get_flight_info(
+        flight.FlightDescriptor.for_command(sql), options
+    )
+    reader = client.do_get(info.endpoints[0].ticket, options)
+    return reader.read_pandas()
+
+# Example: Load Gold layer data
+df = query_dremio("SELECT * FROM catalog.gold.customer_lifetime_value")
+```
+
+### 14.3 Product Reviews Analysis Notebook
+
+The `notebooks/product_reviews_analysis.ipynb` notebook demonstrates text analytics on product reviews, including word clouds and sentiment analysis.
+
+#### What It Does
+
+| Step | Description |
+|------|-------------|
+| 1. Data Loading | Connects to Dremio and loads product reviews from Silver layer |
+| 2. Basic Stats | Review counts and distribution by vehicle model |
+| 3. Word Clouds | Visual word frequency analysis per vehicle model |
+| 4. Sentiment Analysis | Classifies reviews as positive/negative/neutral using TextBlob |
+| 5. Trend Analysis | Sentiment over time and by customer segment |
+
+#### Running the Notebook
+
+1. Open JupyterLab: http://localhost:8888
+2. Navigate to `notebooks/product_reviews_analysis.ipynb`
+3. Run all cells sequentially (first cell installs wordcloud and textblob)
+
+#### Expected Output
+
+- **Word Clouds**: One per vehicle model showing common review terms
+- **Sentiment Charts**: Distribution bar charts (overall, by model, by state, by VIP status)
+- **Time Series**: Sentiment trends over time
+
+### 14.4 Customer Segmentation Notebook (Advanced)
+
+The `notebooks/customer_segmentation.ipynb` notebook demonstrates RFM (Recency, Frequency, Monetary) customer segmentation using K-Means clustering.
+
+> **Note**: RFM analysis is a well-established marketing technique developed in the direct mail industry. It's widely used in customer analytics to identify and segment customers based on purchasing behavior. This notebook applies RFM with K-Means clustering for automated customer segmentation.
+
+#### What It Does
+
+| Step | Description |
+|------|-------------|
+| 1. Data Loading | Connects to Dremio and loads customer/sales data |
+| 2. RFM Features | Calculates Recency, Frequency, Monetary values |
+| 3. Optimal K | Uses elbow method to find optimal cluster count |
+| 4. Clustering | Applies K-Means to segment customers |
+| 5. Visualization | 3D scatter plots, radar charts, segment profiles |
+| 6. Insights | Business recommendations per segment |
+
+#### RFM Features Explained
+
+| Feature | Description | Calculation |
+|---------|-------------|-------------|
+| **Recency** | Days since last purchase | `TODAY - last_purchase_date` |
+| **Frequency** | Number of orders | `COUNT(orders)` |
+| **Monetary** | Total spend | `SUM(revenue)` |
+
+#### Running the Notebook
+
+1. Open JupyterLab: http://localhost:8888
+2. Navigate to `notebooks/customer_segmentation.ipynb`
+3. Run all cells sequentially
+4. Adjust `optimal_k` if needed (default: 4-5 clusters)
+
+#### Expected Output
+
+The notebook generates:
+- **5 Customer Segments**: Champions, Loyal, Potential Loyalists, At Risk, Lost
+- **Visualizations**: 3D cluster plots, radar charts, distribution histograms
+- **Export files**: `customer_segments.csv`, `segment_summary.csv`
+
+### 14.5 Required Libraries
+
+The JupyterLab container includes these libraries (pre-installed):
+
+```
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+plotly
+pyarrow
+```
+
+---
+
+## 15. AI Agent with Chainlit
+
+A natural language SQL interface powered by LangChain, Mistral AI, and Chainlit. Ask questions in plain English and get SQL-powered answers from your Data Lakehouse.
+
+### Key Features
+
+- **Dynamic schema discovery** - Automatically detects all Gold layer tables and columns at startup
+- **SQL transparency** - Shows the generated SQL query alongside results
+- **Zero hardcoding** - Uses `SHOW TABLES` and `SELECT * LIMIT 1` to discover schema
+- **100% free** - Mistral AI free tier, no credit card required
+
+### 15.1 Architecture
+
+```
+User Question (Natural Language)
+    ↓
+Chainlit UI (http://localhost:8501)
+    ↓
+LangChain ReAct Agent
+    ↓
+Mistral Large LLM (FREE tier)
+    ↓
+SQL Query Generation
+    ↓
+PyArrow Flight → Dremio
+    ↓
+Formatted Results + SQL Query
+```
+
+### 15.2 Prerequisites
+
+1. **Free Mistral API Key** (required)
+2. **Running Dremio** (lakehouse services must be up)
+
+### 15.3 Getting Your Free Mistral API Key
+
+1. Visit https://console.mistral.ai/
+2. Sign up (email only, **no credit card required**)
+3. Click **"API Keys"** in the left sidebar
+4. Click **"Create new key"**
+5. Copy the key (starts with `sk-...`)
+
+> **Note**: The free tier has rate limits (~2-5 requests/minute) but is perfect for learning.
+
+### 15.4 Setup
+
+#### Step 1: Configure Environment
+
+```bash
+cd agent
+cp .env.example .env
+```
+
+Edit `.env` and add your Mistral API key:
+
+```
+MISTRAL_API_KEY=sk-your-actual-key-here
+```
+
+#### Step 2: Start the Agent
+
+```bash
+docker-compose up -d lakehouse-agent
+```
+
+#### Step 3: Access the UI
+
+Open http://localhost:8501
+
+### 15.5 Available Tables
+
+The agent **automatically discovers** all Gold layer tables at startup. Current tables include:
+
+| Table | Columns |
+|-------|---------|
+| `catalog.gold.customer_lifetime_value` | customer_id, first_name, email, total_spent, total_transactions, average_transaction_value |
+| `catalog.gold.customer_segmentation` | customer_id, first_name, email, city, state, country, total_purchases, average_purchase_value, preferred_models |
+| `catalog.gold.customers_gold` | customer_id, first_name, email, city, state, country, country_code, location |
+| `catalog.gold.enriched_sales` | sale_id, sale_date, sale_price, payment_method, customer_name, vehicle_model |
+| `catalog.gold.charging_station_utilization` | station_id, city, country, station_type, total_sessions, average_duration, total_energy_consumed |
+| `catalog.gold.vehicle_health_analysis` | vehicle_id, model, manufacturing_year, alerts, maintenance_history, health_status |
+| `catalog.gold.vehicle_usage` | vehicle_id, model_name, model_type, year, total_sales, average_rating |
+
+> **Note**: If you add new Gold layer tables, just restart the agent - it will discover them automatically!
+
+### 15.6 Example Questions
+
+**Customer Analytics:**
+- "Show me the top 5 customers by total spent"
+- "What's the average transaction value?"
+- "How many customers are in each country?"
+
+**Sales Analysis:**
+- "What are the total sales by payment method?"
+- "Show me sales by vehicle model"
+
+**Charging Network:**
+- "Which cities have the most charging sessions?"
+- "What's the total energy consumed by station type?"
+
+**Vehicle Fleet:**
+- "What vehicles need maintenance?" (health_status = 'Needs Attention')
+- "Show vehicles by manufacturing year"
+
+### 15.7 How It Works
+
+1. **Startup**: Agent connects to Dremio, runs `SHOW TABLES IN catalog.gold`, then queries each table to discover columns
+2. **Question**: You ask a question in natural language
+3. **Reasoning**: LangChain ReAct agent thinks about which table to query
+4. **SQL Generation**: Mistral Large generates the SQL query
+5. **Execution**: PyArrow Flight sends query to Dremio
+6. **Response**: Agent displays the **SQL query** and **formatted results**
+
+> **Note**: No conversation memory - each question is independent. This keeps responses fast and focused.
+
+### 15.8 Files Structure
+
+```
+agent/
+├── app.py              # Main Chainlit application
+├── requirements.txt    # Python dependencies
+├── Dockerfile          # → Located at docker/agent/Dockerfile
+├── .env.example        # Configuration template
+├── .env                # Your configuration (git-ignored)
+├── chainlit.md         # Welcome message
+└── .gitignore          # Ignores .env and cache
+```
+
+### 15.9 Agent Behavior
+
+The agent is configured with strict rules to ensure reliable results:
+
+- **Always uses SQL** - Never answers without executing a query first
+- **No hallucination** - If a query fails, it says "I could not retrieve data" instead of making up answers
+- **NULL filtering** - Automatically filters NULL values when querying specific fields
+- **SQL transparency** - Every response shows the executed SQL query
+
+### 15.10 Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "MISTRAL_API_KEY not found" | Create `.env` from `.env.example` and add your API key |
+| "Initialization Error" | Check Dremio is running: `docker ps \| grep dremio` |
+| "Agent stopped due to iteration limit" | Try a simpler question, or use `mistral-large-latest` model |
+| Agent timeout / slow | Free tier rate limits - wait 30s between queries |
+| "No tables found" | Run the data pipeline first (Bronze → Silver → Gold) |
+| Container won't start | Check logs: `docker-compose logs lakehouse-agent` |
+| "Format error" | Agent self-corrects - wait for retry |
+| Unexpected answer | Check the SQL query shown - does it match your question? |
+
+**Check agent logs:**
+```bash
+docker-compose logs -f lakehouse-agent
+```
+
+**Restart agent after config changes:**
+```bash
+docker-compose build --no-cache lakehouse-agent
+docker-compose up -d lakehouse-agent
+```
+
+### 15.11 Technology Stack (100% Free)
+
+| Component | Purpose | Cost |
+|-----------|---------|------|
+| Mistral Large | LLM for SQL generation | FREE (with rate limits) |
+| LangChain | ReAct agent framework | FREE (open source) |
+| Chainlit | Chat UI | FREE (open source) |
+| PyArrow Flight | High-performance Dremio client | FREE (open source) |
+| Dremio | SQL query engine | FREE (open source) |
+
+### 15.12 Configuration Options
+
+Environment variables in `agent/.env`:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `MISTRAL_API_KEY` | (required) | Your Mistral API key |
+| `MISTRAL_MODEL` | `mistral-large-latest` | Model to use (alternatives: `open-mixtral-8x22b`, `codestral-latest`) |
+| `SCHEMA_PATH` | `catalog.gold` | Schema to query (change to query other layers) |
+| `DREMIO_HOST` | `dremio` | Dremio hostname (Docker network) |
+| `DREMIO_PORT` | `32010` | Arrow Flight port |
+
+---
+
+## 16. Naming Conventions
 
 ### Database Objects
 
@@ -2296,7 +2599,7 @@ lakehouse/                    # Bucket
 
 ---
 
-## 15. Troubleshooting
+## 17. Troubleshooting
 
 ### Dremio can't read Nessie metadata
 
