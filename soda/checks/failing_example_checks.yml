@@ -1,0 +1,69 @@
+# Soda Failing Checks Example
+# ============================
+# Run: soda scan -d lakehouse -c /app/soda/configuration_silver.yml /app/soda/checks/failing_example_checks.yml
+#
+# These checks are DESIGNED TO FAIL to demonstrate Soda's failure detection.
+# Use this file to teach students what happens when data quality issues occur.
+
+# =============================================================================
+# CUSTOMERS TABLE - Multiple failing checks
+# =============================================================================
+checks for customers:
+  # EXAMPLE 1: Impossible Row Count
+  # This will FAIL because our customers table has ~2500 rows, not 1 million
+  - row_count > 1000000:
+      name: "[WILL FAIL] Customers should have over 1 million rows"
+
+  # EXAMPLE 2: Unrealistic Average Check
+  # This will FAIL - checking for impossible condition
+  - row_count = 999999:
+      name: "[WILL FAIL] Exact impossible row count"
+
+# =============================================================================
+# SALES TABLE - Business rule failures
+# =============================================================================
+checks for sales:
+  # EXAMPLE 3: Unrealistic Business Rule
+  # This will FAIL because not all sales are over $100,000
+  - min(sale_price) > 100000:
+      name: "[WILL FAIL] All sales should be over $100,000"
+
+  # EXAMPLE 4: Impossible maximum
+  - max(sale_price) < 100:
+      name: "[WILL FAIL] All sales should be under $100"
+
+# =============================================================================
+# CHARGING SESSIONS - Impossible metrics
+# =============================================================================
+checks for charging_sessions:
+  # EXAMPLE 5: Invalid average threshold
+  - avg(energy_consumed_kwh) > 500:
+      name: "[WILL FAIL] Average energy should be impossibly high"
+
+  # EXAMPLE 6: Zero tolerance that will fail
+  - row_count = 0:
+      name: "[WILL FAIL] Table should be empty (it's not)"
+
+# =============================================================================
+# HOW TO USE THIS FILE
+# =============================================================================
+#
+# 1. Run the failing checks:
+#    docker-compose exec dagster soda scan -d lakehouse \
+#      -c /app/soda/configuration_silver.yml \
+#      /app/soda/checks/failing_example_checks.yml
+#
+# 2. Observe the output:
+#    - Red FAILED status for each check
+#    - Actual vs expected values shown
+#    - Exit code will be non-zero (3 = failures found)
+#
+# 3. Compare with passing checks:
+#    docker-compose exec dagster soda scan -d lakehouse \
+#      -c /app/soda/configuration_silver.yml \
+#      /app/soda/checks/silver_checks.yml
+#
+# This demonstrates why data quality checks are essential:
+# - Catch data issues before they reach dashboards
+# - Validate assumptions about data
+# - Alert on unexpected changes

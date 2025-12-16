@@ -1,0 +1,12 @@
+# Soda Core Configuration for Data Lakehouse
+# Connects to Dremio for data quality checks via Arrow Flight SQL ODBC
+
+data_source lakehouse:
+  type: dremio
+  driver: Arrow Flight SQL ODBC Driver
+  host: dremio
+  port: "32010"
+  username: dremio
+  password: dremio123
+  schema: catalog.silver
+  use_encryption: "false"

@@ -3,6 +3,7 @@ services:
   # ORCHESTRATION - Dagster
   # ==========================================================================
   dagster:
+    platform: linux/x86_64
     build:
       context: .
       dockerfile: docker/dagster/Dockerfile
@@ -13,12 +14,21 @@ services:
       - ./data:/data
       - ./transformation:/app/transformation
       - ./orchestration:/app/orchestration
+      - ./soda:/app/soda
+      - dagster_data:/app/orchestration/.dagster_home  # Persist run history
     environment:
+      DAGSTER_HOME: /app/orchestration/.dagster_home
       AWS_S3_ENDPOINT: http://minio:9000
       AWS_ACCESS_KEY_ID: minio
       AWS_SECRET_ACCESS_KEY: minioadmin
       DATA_FOLDER: /data
       DAGSTER_DBT_PARSE_PROJECT_ON_LOAD: "1"
+      # Airbyte connection (abctl runs on host machine)
+      AIRBYTE_HOST: host.docker.internal
+      AIRBYTE_PORT: "8000"
+      # Get credentials via: abctl local credentials
+      AIRBYTE_USERNAME: ${AIRBYTE_USERNAME:-airbyte}
+      AIRBYTE_PASSWORD: ${AIRBYTE_PASSWORD:-password}
     depends_on:
       - minioserver
       - dremio
@@ -55,6 +65,8 @@ services:
     container_name: nessie
     ports:
       - "19120:19120"
+    volumes:
+      - nessie_data:/nessie/data
 
   superset:
     build: ./docker/superset
@@ -89,6 +101,7 @@ networks:
     driver: bridge
 
 volumes:
+  dagster_data:
   dremio_data:
   minio_data:
   nessie_data:

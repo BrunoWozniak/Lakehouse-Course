@@ -1,12 +1,15 @@
-{{ config( twin_strategy="allow", materialized="table" ) }}
+-- Silver layer: Charging stations cleaned and standardized
+-- Excludes Airbyte metadata columns (_airbyte_*)
+
+{{ config(materialized="table", twin_strategy="allow") }}
 
 SELECT
     id,
     address,
     city,
-    country,
-    number_of_chargers,
-    operational_status,
     state,
-    station_type
-FROM {{ source('chargenet_bronze', 'chargenet_stations') }}
+    country,
+    station_type,
+    number_of_chargers,
+    operational_status
+FROM {{ source("bronze", "stations") }}

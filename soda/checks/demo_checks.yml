@@ -1,5 +1,5 @@
 # Soda Demo Checks - Show What Happens with Bad Data
-# Run: soda scan -d lakehouse -c soda/configuration.yml soda/checks/demo_checks.yml
+# Run: soda scan -d lakehouse -c soda/configuration_silver.yml soda/checks/demo_checks.yml
 #
 # This file demonstrates different Soda check types and failure scenarios.
 
@@ -12,33 +12,6 @@ checks for catalog.silver.customers:
       name: Customer data is fresh (updated within 24 hours)
       warn: when > 12h
       fail: when > 24h
-
-# =============================================================================
-# DEMO 2: ANOMALY DETECTION
-# Fails if row count changes dramatically
-# =============================================================================
-checks for catalog.silver.sales:
-  - anomaly detection for row_count:
-      name: Sales volume is within normal range
-      warn: when > 2 stddev
-      fail: when > 3 stddev
-
-# =============================================================================
-# DEMO 3: REFERENTIAL INTEGRITY
-# Fails if foreign keys don't exist in parent table
-# =============================================================================
-checks for catalog.silver.sales:
-  - reference check:
-      name: All sales reference valid customers
-      target column: customer_id
-      reference column: catalog.silver.customers.id
-      fail: when > 0 missing
-
-# =============================================================================
-# DEMO 4: SCHEMA CHECK
-# Fails if expected columns are missing
-# =============================================================================
-checks for catalog.silver.customers:
   - schema:
       name: Customer table has required columns
       fail:
@@ -49,6 +22,18 @@ checks for catalog.silver.customers:
           - city
           - state
           - country
+
+# =============================================================================
+# DEMO 2: ANOMALY DETECTION
+# Fails if row count changes dramatically
+# =============================================================================
+checks for catalog.silver.sales:
+  - anomaly detection for row_count:
+      name: Sales volume is within normal range
+      warn: when > 2 stddev
+      fail: when > 3 stddev
+  - values in (customer_id) must exist in catalog.silver.customers (id):
+      name: All sales reference valid customers
 
 # =============================================================================
 # DEMO 5: DATA DISTRIBUTION
@@ -84,7 +69,7 @@ checks for catalog.silver.stations:
 
   - invalid_percent(operational_status) < 1%:
       name: Operational status is valid
-      valid values: ['Active', 'Inactive', 'Maintenance', 'Planned']
+      valid values: ["Active", "Inactive", "Maintenance", "Planned"]
 
 # =============================================================================
 # DEMO 8: CROSS-TABLE CONSISTENCY

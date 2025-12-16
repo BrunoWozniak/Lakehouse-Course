@@ -1,11 +1,16 @@
-{{ config( twin_strategy="allow", materialized="table" ) }}
+-- Silver layer: Customers cleaned and standardized
+-- Excludes Airbyte metadata columns (_airbyte_*)
+
+{{ config(materialized="table", twin_strategy="allow") }}
 
 SELECT
     id,
     first_name,
-    -- Assuming email is important and retained
+    last_name,
     email,
+    phone,
+    address,
     city,
-    "state",
+    state,
     country
-FROM {{ source("ecoride_bronze", "ecoride_customers") }}
+FROM {{ source("bronze", "customers") }}

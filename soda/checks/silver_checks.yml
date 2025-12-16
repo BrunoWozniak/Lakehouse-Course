@@ -1,5 +1,5 @@
 # Soda Data Quality Checks - Silver Layer
-# Run: soda scan -d lakehouse -c soda/configuration.yml soda/checks/silver_checks.yml
+# Run: soda scan -d lakehouse -c soda/configuration_silver.yml soda/checks/silver_checks.yml
 
 # =============================================================================
 # ECORIDE SILVER CHECKS

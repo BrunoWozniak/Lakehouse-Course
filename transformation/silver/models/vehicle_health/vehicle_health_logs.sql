@@ -1,5 +1,6 @@
 -- Silver layer: Vehicle health logs cleaned and standardized
--- Naming: All columns use snake_case convention
+-- Excludes Airbyte metadata columns (_airbyte_*)
+-- NOTE: Column names depend on original JSON field names - may need adjustment
 
 {{ config(materialized="table", twin_strategy="allow") }}
 
@@ -9,4 +10,4 @@ SELECT
     ManufacturingYear AS manufacturing_year,
     Alerts AS alerts,
     MaintenanceHistory AS maintenance_history
-FROM {{ source("vehicle_health_bronze", "vehicle_health_logs") }}
+FROM {{ source("bronze", "vehicle_health") }}

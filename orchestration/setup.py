@@ -9,6 +9,7 @@ setup(
         "dagster",
         "dagster-webserver",
         "dagster-dbt",
+        "dagster-airbyte",
         # dbt for Dremio
         "dbt-core",
         "dbt-dremio",

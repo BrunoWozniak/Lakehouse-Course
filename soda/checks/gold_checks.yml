@@ -1,5 +1,5 @@
 # Soda Data Quality Checks - Gold Layer
-# Run: soda scan -d lakehouse -c soda/configuration.yml soda/checks/gold_checks.yml
+# Run: soda scan -d lakehouse -c soda/configuration_gold.yml soda/checks/gold_checks.yml
 
 # =============================================================================
 # ECORIDE GOLD CHECKS
@@ -56,5 +56,6 @@ checks for charging_station_utilization:
 checks for vehicle_health_analysis:
   - row_count > 0:
       name: Health analysis has data
-  - values in (health_status) must exist in ('Healthy', 'Needs Attention'):
+  - invalid_count(health_status) = 0:
       name: Valid health status values
+      valid values: ['Healthy', 'Needs Attention']

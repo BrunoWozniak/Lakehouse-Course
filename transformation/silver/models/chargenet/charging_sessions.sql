@@ -1,4 +1,8 @@
-{{ config( twin_strategy="allow", materialized="table" ) }}
+-- Silver layer: Charging sessions cleaned and standardized
+-- Excludes Airbyte metadata columns (_airbyte_*)
+-- NOTE: Column names may need adjustment based on actual Bronze schema
+
+{{ config(materialized="table", twin_strategy="allow") }}
 
 SELECT
     id,
@@ -9,4 +13,4 @@ SELECT
     cost,
     start_time,
     end_time
-FROM {{ source("chargenet_bronze", "chargenet_charging_sessions") }}
+FROM {{ source("bronze", "charging_sessions") }}

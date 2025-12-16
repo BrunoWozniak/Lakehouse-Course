@@ -6,9 +6,34 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
+# - git: for dbt package management
+# - unixodbc: required by Soda for Dremio ODBC connection
+# - curl: for downloading Dremio ODBC driver
+# - rpm2cpio/cpio: for extracting RPM packages (Dremio only provides .rpm, not .deb)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
+    unixodbc \
+    unixodbc-dev \
+    curl \
+    rpm2cpio \
+    cpio \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Dremio Arrow Flight SQL ODBC Driver
+# Dremio only provides .rpm packages (x86_64 only), so we extract it manually
+RUN curl -L -o /tmp/dremio-odbc.rpm \
+    https://download.dremio.com/arrow-flight-sql-odbc-driver/arrow-flight-sql-odbc-driver-LATEST.x86_64.rpm \
+    && cd /tmp \
+    && rpm2cpio dremio-odbc.rpm | cpio -idmv \
+    && mv /tmp/opt/arrow-flight-sql-odbc-driver /opt/ \
+    && rm -rf /tmp/dremio-odbc.rpm /tmp/opt \
+    && cd /opt/arrow-flight-sql-odbc-driver/lib64 \
+    && ln -s libarrow-odbc.so.* libarrow-odbc.so
+
+# Configure ODBC driver
+RUN echo "[Arrow Flight SQL ODBC Driver]\n\
+Description=Dremio Arrow Flight SQL ODBC Driver\n\
+Driver=/opt/arrow-flight-sql-odbc-driver/lib64/libarrow-odbc.so" > /etc/odbcinst.ini
 
 # Copy orchestration package
 COPY orchestration/ /app/orchestration/
